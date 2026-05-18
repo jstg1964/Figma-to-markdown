@@ -1,0 +1,37 @@
+figma-to-markdown/
+├── server.js                          ← entry point, graceful shutdown
+├── package.json
+├── .env.example                       ← all env vars documented
+├── .gitignore
+├── README.md                          ← full API reference + quickstart
+├── src/
+│   ├── app.js                         ← Express factory, CORS, security headers
+│   ├── config/index.js                ← zero-dep .env loader + config validation
+│   ├── api/
+│   │   ├── figmaClient.js             ← Figma REST client (native https, cached)
+│   │   └── routes/
+│   │       ├── index.js               ← route aggregator
+│   │       ├── figma.routes.js        ← all /api/figma/* endpoints
+│   │       └── health.routes.js       ← /health, /health/ready, /health/cache
+│   ├── extractors/
+│   │   ├── frameExtractor.js          ← FRAME/GROUP/SECTION + auto-layout
+│   │   ├── componentExtractor.js      ← sets, variants, instances, overrides
+│   │   ├── textExtractor.js           ← typography, colour, mixed styles
+│   │   ├── layoutExtractor.js         ← flex, constraints, layout grids
+│   │   ├── interactionExtractor.js    ← all triggers, actions, transitions
+│   │   └── flowExtractor.js           ← flows + BFS reachability graph
+│   ├── normalizers/normalizer.js      ← orchestrates all extractors → typed JSON
+│   ├── renderers/markdownRenderer.js  ← JSON → Markdown (full or per-page)
+│   ├── middleware/
+│   │   ├── errorHandler.js            ← Figma errors, timeouts, 404, 500
+│   │   ├── requestLogger.js           ← timing + status per request
+│   │   └── validate.js                ← fileKey + query param validation
+│   └── utils/
+│       ├── logger.js                  ← zero-dep structured logger (winston-compatible)
+│       ├── cache.js                   ← LRU in-memory cache with TTL
+│       └── helpers.js                 ← walkTree, colorToCSS, slugify, etc.
+└── tests/
+    ├── fixtures/sampleFigmaResponse.json
+    ├── extractors.test.js             ← 6 suites ✅
+    ├── normalizer.test.js             ← 11 assertions ✅
+    └── markdownRenderer.test.js       ← 4 render modes ✅

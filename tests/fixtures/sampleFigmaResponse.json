@@ -1,0 +1,201 @@
+{
+  "name": "My Design System",
+  "lastModified": "2026-05-01T12:00:00Z",
+  "thumbnailUrl": "https://example.com/thumb.png",
+  "version": "42",
+  "role": "editor",
+  "editorType": "figma",
+  "schemaVersion": 0,
+  "document": {
+    "id": "0:0",
+    "name": "Document",
+    "type": "DOCUMENT",
+    "children": [
+      {
+        "id": "1:0",
+        "name": "Page 1",
+        "type": "CANVAS",
+        "backgroundColor": { "r": 0.96, "g": 0.96, "b": 0.96, "a": 1 },
+        "prototypeStartNodeID": "10:1",
+        "flowStartingPoints": [
+          { "nodeId": "10:1", "name": "Main Flow" }
+        ],
+        "children": [
+          {
+            "id": "10:1",
+            "name": "Home Screen",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 0, "y": 0, "width": 375, "height": 812 },
+            "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1, "a": 1 }, "visible": true }],
+            "clipsContent": true,
+            "layoutMode": "VERTICAL",
+            "primaryAxisSizingMode": "FIXED",
+            "counterAxisSizingMode": "FIXED",
+            "itemSpacing": 16,
+            "paddingTop": 24,
+            "paddingRight": 16,
+            "paddingBottom": 24,
+            "paddingLeft": 16,
+            "cornerRadius": 0,
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "reactions": [
+              {
+                "trigger": { "type": "ON_CLICK" },
+                "action": {
+                  "type": "NODE",
+                  "destinationId": "10:2",
+                  "transition": {
+                    "type": "SMART_ANIMATE",
+                    "duration": 0.3,
+                    "easing": { "type": "EASE_OUT" }
+                  },
+                  "navigation": "NAVIGATE"
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "10:10",
+                "name": "Header",
+                "type": "FRAME",
+                "absoluteBoundingBox": { "x": 0, "y": 0, "width": 375, "height": 60 },
+                "fills": [],
+                "layoutMode": "HORIZONTAL",
+                "itemSpacing": 8,
+                "paddingTop": 0, "paddingRight": 0, "paddingBottom": 0, "paddingLeft": 0,
+                "children": [
+                  {
+                    "id": "10:11",
+                    "name": "Title",
+                    "type": "TEXT",
+                    "characters": "Welcome Back",
+                    "absoluteBoundingBox": { "x": 16, "y": 12, "width": 200, "height": 36 },
+                    "fills": [{ "type": "SOLID", "color": { "r": 0.1, "g": 0.1, "b": 0.1, "a": 1 } }],
+                    "style": {
+                      "fontFamily": "Inter",
+                      "fontPostScriptName": "Inter-Bold",
+                      "fontWeight": 700,
+                      "fontSize": 28,
+                      "textAlignHorizontal": "LEFT",
+                      "textAlignVertical": "TOP",
+                      "letterSpacing": 0,
+                      "lineHeightPx": 36,
+                      "lineHeightUnit": "PIXELS",
+                      "textDecoration": "NONE",
+                      "textCase": "ORIGINAL"
+                    },
+                    "visible": true,
+                    "opacity": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "10:2",
+            "name": "Detail Screen",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 400, "y": 0, "width": 375, "height": 812 },
+            "fills": [{ "type": "SOLID", "color": { "r": 0.98, "g": 0.98, "b": 0.98, "a": 1 } }],
+            "clipsContent": true,
+            "layoutMode": "NONE",
+            "opacity": 1,
+            "visible": true,
+            "locked": false,
+            "children": [
+              {
+                "id": "10:20",
+                "name": "CTA Button",
+                "type": "INSTANCE",
+                "componentId": "C:1",
+                "absoluteBoundingBox": { "x": 16, "y": 750, "width": 343, "height": 48 },
+                "visible": true,
+                "opacity": 1,
+                "componentProperties": {
+                  "Label": { "value": "Get Started", "type": "TEXT" },
+                  "Variant": { "value": "Primary", "type": "VARIANT" }
+                },
+                "overrides": [
+                  { "id": "10:21", "overriddenFields": ["characters"] }
+                ],
+                "reactions": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "2:0",
+        "name": "Components",
+        "type": "CANVAS",
+        "backgroundColor": { "r": 0.95, "g": 0.95, "b": 0.95, "a": 1 },
+        "children": [
+          {
+            "id": "C:0",
+            "name": "Button",
+            "type": "COMPONENT_SET",
+            "absoluteBoundingBox": { "x": 0, "y": 0, "width": 400, "height": 200 },
+            "children": [
+              {
+                "id": "C:1",
+                "name": "Button/Primary",
+                "type": "COMPONENT",
+                "absoluteBoundingBox": { "x": 0, "y": 0, "width": 200, "height": 48 },
+                "fills": [{ "type": "SOLID", "color": { "r": 0.2, "g": 0.4, "b": 1, "a": 1 } }],
+                "cornerRadius": 8,
+                "children": [
+                  {
+                    "id": "C:2",
+                    "name": "Label",
+                    "type": "TEXT",
+                    "characters": "Button",
+                    "style": {
+                      "fontFamily": "Inter",
+                      "fontWeight": 600,
+                      "fontSize": 16,
+                      "textAlignHorizontal": "CENTER"
+                    },
+                    "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1, "a": 1 } }],
+                    "visible": true,
+                    "opacity": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "components": {
+    "C:1": {
+      "key": "abc123",
+      "name": "Button/Primary",
+      "description": "Primary call-to-action button",
+      "componentSetId": "C:0"
+    }
+  },
+  "componentSets": {
+    "C:0": {
+      "key": "set001",
+      "name": "Button",
+      "description": "Button component set with variants"
+    }
+  },
+  "styles": {
+    "S:1": {
+      "key": "style001",
+      "name": "Primary/Blue",
+      "styleType": "FILL",
+      "description": "Primary brand colour"
+    },
+    "S:2": {
+      "key": "style002",
+      "name": "Heading/H1",
+      "styleType": "TEXT",
+      "description": "Page-level heading"
+    }
+  }
+}

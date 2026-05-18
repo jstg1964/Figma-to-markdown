@@ -1,0 +1,27 @@
+{
+  "name": "figma-to-markdown",
+  "version": "1.0.0",
+  "description": "Node.js backend service that reads Figma designs via the REST API and renders them as structured JSON and Markdown.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tests/extractors.test.js && node tests/normalizer.test.js && node tests/markdownRenderer.test.js",
+    "test:extractors": "node tests/extractors.test.js",
+    "test:normalizer": "node tests/normalizer.test.js",
+    "test:renderer": "node tests/markdownRenderer.test.js"
+  },
+  "keywords": ["figma", "design", "markdown", "rest-api", "prototype", "design-system"],
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {},
+  "_notes": {
+    "zero-deps": "logger.js and config/index.js are zero-dependency implementations. To use winston + dotenv instead: npm install winston dotenv, then swap the two files per the comments inside them.",
+    "optional-upgrades": "winston (structured logging), dotenv (env loading), ioredis (Redis cache), helmet (security headers)"
+  }
+}

@@ -34,6 +34,7 @@ const server = app.listen(config.port, () => {
   logger.info(`    GET /api/figma/:fileKey/styles`);
   logger.info(`    GET /api/figma/:fileKey/images?nodeIds=id1&format=png`);
   logger.info(`    GET /api/figma/:fileKey/versions`);
+  logger.info(`    GET /api/figma/:fileKey/validate`);
 });
 
 // ── Graceful shutdown ────────────────────────────────────────────────────────

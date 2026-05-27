@@ -18,7 +18,14 @@ function loadDotenv() {
     const eqIdx = line.indexOf('=');
     if (eqIdx === -1) continue;
     const key = line.slice(0, eqIdx).trim();
-    const val = line.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '');
+    let val = line.slice(eqIdx + 1).trim();
+    // Remove inline comments
+    const commentIdx = val.indexOf('#');
+    if (commentIdx !== -1) {
+      val = val.slice(0, commentIdx).trim();
+    }
+    // Remove quotes
+    val = val.replace(/^["']|["']$/g, '');
     if (key && !(key in process.env)) {
       process.env[key] = val;
     }
@@ -26,6 +33,47 @@ function loadDotenv() {
 }
 
 loadDotenv();
+
+/**
+ * Load component mapping file if enabled
+ */
+function loadComponentMapping() {
+  const enabled = process.env.COMPONENT_MAPPING_ENABLED === 'true';
+  console.log(`[Config] COMPONENT_MAPPING_ENABLED = "${process.env.COMPONENT_MAPPING_ENABLED}", enabled = ${enabled}`);
+  if (!enabled) return { enabled: false, mapping: {} };
+
+  const filePath = process.env.COMPONENT_MAPPING_FILE || 'ConversionMapForSynapse.json';
+  const fullPath = path.resolve(process.cwd(), filePath);
+  console.log(`[Config] Loading component mapping from: ${fullPath}`);
+
+  try {
+    if (!fs.existsSync(fullPath)) {
+      console.warn(`Component mapping file not found: ${fullPath}`);
+      return { enabled: true, mapping: {} };
+    }
+
+    const content = fs.readFileSync(fullPath, 'utf8');
+    const mapping = JSON.parse(content);
+
+    // Remove comment keys (starting with _)
+    const cleanMapping = {};
+    for (const [key, value] of Object.entries(mapping)) {
+      if (!key.startsWith('_')) {
+        cleanMapping[key] = value;
+      }
+    }
+
+    return { enabled: true, mapping: cleanMapping };
+  } catch (err) {
+    console.warn(`Failed to load component mapping file: ${err.message}`);
+    return { enabled: true, mapping: {} };
+  }
+}
+
+const componentMapping = loadComponentMapping();
+if (componentMapping.enabled) {
+  console.log(`[Config] Component mapping enabled with ${Object.keys(componentMapping.mapping).length} mappings`);
+}
 
 const requiredEnvVars = ['FIGMA_ACCESS_TOKEN'];
 
@@ -67,6 +115,8 @@ const config = {
     maxDepth: parseInt(process.env.MD_MAX_DEPTH || '10', 10),
     codeBlockLang: process.env.MD_CODE_LANG || 'json',
   },
+
+  componentMapping,
 };
 
 module.exports = { config, validateConfig };

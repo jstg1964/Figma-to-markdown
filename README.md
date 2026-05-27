@@ -135,6 +135,7 @@ All endpoints accept the Figma **file key** — the alphanumeric ID from a Figma
 | `GET` | `/api/figma/:fileKey/versions` | File version history |
 | `GET` | `/api/figma/:fileKey/flows` | Prototype flows + graphs |
 | `GET` | `/api/figma/:fileKey/interactions` | All prototype interactions |
+| `GET` | `/api/figma/:fileKey/validate` | Validate extraction against raw Figma data |
 
 ### Query Parameters
 
@@ -212,6 +213,40 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `LOG_LEVEL` | — | `debug` | `error` \| `warn` \| `info` \| `debug` |
 | `LOG_FORMAT` | — | `pretty` | `pretty` (dev) \| `json` (prod) |
 | `MD_INCLUDE_NODE_IDS` | — | `true` | Annotate Markdown headings with node IDs |
+| `COMPONENT_MAPPING_ENABLED` | — | `false` | Enable component name mapping |
+| `COMPONENT_MAPPING_FILE` | — | `ConversionMapForSynapse.json` | Path to component mapping JSON file |
+
+---
+
+## Component Name Mapping
+
+This feature allows you to map Figma component names to custom component names (e.g., for a design system like Synapse). When enabled, component names in both JSON and Markdown outputs will be replaced according to the mapping.
+
+### Usage
+
+1. Create a mapping JSON file (default: `ConversionMapForSynapse.json` in the project root)
+2. Add your component name mappings in the format: `{"OriginalName": "MappedName"}`
+3. Set `COMPONENT_MAPPING_ENABLED=true` in your `.env` file
+4. Optionally set a custom file path with `COMPONENT_MAPPING_FILE`
+
+### Example Mapping File
+
+```json
+{
+  "_comment": "Component name mapping for Synapse design system",
+  "_description": "Map Figma component names to Synapse component names. If a component name is not in this list, the original name will be used.",
+  "Button": "SynapseButton",
+  "Checkbox": "SynapseCheckbox",
+  "TextInput": "SynapseTextInput"
+}
+```
+
+### Behavior
+
+- Component names are mapped during extraction, affecting both JSON and Markdown outputs
+- If a component name is not in the mapping file, the original name is preserved
+- Keys starting with `_` in the mapping file are treated as comments and ignored
+- The feature is opt-in via environment variable to avoid breaking existing behavior
 
 ---
 

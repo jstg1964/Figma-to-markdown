@@ -4,6 +4,14 @@ const { slugify, truncate, colorToCSS } = require('../utils/helpers');
 const { config } = require('../config');
 
 /**
+ * Apply component name mapping if enabled
+ */
+function _applyMapping(name) {
+  if (!config.componentMapping.enabled) return name;
+  return config.componentMapping.mapping[name] || name;
+}
+
+/**
  * Render a normalised Figma document (output of normalizer.normalize()) into
  * a single Markdown string, or a map of per-page Markdown strings.
  *
@@ -171,6 +179,20 @@ function _renderPage(doc, page, frames, interactions, flows, ctx) {
   }
   lines.push('');
 
+  // Summary of top-level elements
+  const topLevelFrames = frames.filter((f) => f.depth === 0);
+  if (topLevelFrames.length > 0) {
+    lines.push('### Top-Level Elements');
+    lines.push('');
+    lines.push('| Name | Type | Size | Children |');
+    lines.push('|------|------|------|----------|');
+    for (const frame of topLevelFrames) {
+      const size = frame.size ? `${frame.size.width}×${frame.size.height}` : '—';
+      lines.push(`| ${_applyMapping(frame.name)} | ${frame.type} | ${size} | ${frame.childCount} |`);
+    }
+    lines.push('');
+  }
+
   // Frames
   if (frames.length > 0) {
     lines.push(`### Frames (${frames.length})`);
@@ -191,7 +213,7 @@ function _renderPage(doc, page, frames, interactions, flows, ctx) {
     // We don't store pageId on text nodes, so include all — they're scoped by page in perPage mode
     return true;
   });
-  if (!ctx._pageTextFiltered && pageText.length > 0 && doc.pages?.length === 1) {
+  if (!ctx._pageTextFiltered && pageText.length > 0) {
     lines.push('');
     lines.push(_renderTextInventory(pageText, ctx));
   }
@@ -211,7 +233,7 @@ function _renderFrame(frame, depth, ctx) {
   const idTag = ctx.includeNodeIds ? ` \`[${frame.id}]\`` : '';
   const typeTag = frame.type !== 'FRAME' ? ` *(${frame.type})*` : '';
 
-  lines.push(`${prefix} ${frame.name}${typeTag}${idTag}`);
+  lines.push(`${prefix} ${_applyMapping(frame.name)}${typeTag}${idTag}`);
   lines.push('');
 
   // Size + layout
@@ -338,12 +360,12 @@ function _renderComponents(components, ctx) {
     lines.push('');
     for (const set of sets) {
       const setVariants = variants.filter((v) => v.containingSetId === set.id);
-      lines.push(`#### ${set.name}`);
+      lines.push(`#### ${_applyMapping(set.name)}`);
       if (set.description) lines.push(`*${set.description}*`);
       lines.push('');
       if (ctx.includeNodeIds) lines.push(`**ID:** \`${set.id}\``);
       if (setVariants.length) {
-        lines.push(`**Variants (${setVariants.length}):** ${setVariants.map((v) => v.name).join(', ')}`);
+        lines.push(`**Variants (${setVariants.length}):** ${setVariants.map((v) => _applyMapping(v.name)).join(', ')}`);
       }
       lines.push('');
     }
@@ -354,7 +376,7 @@ function _renderComponents(components, ctx) {
     lines.push('');
     for (const comp of standalones) {
       const idTag = ctx.includeNodeIds ? ` \`[${comp.id}]\`` : '';
-      lines.push(`- **${comp.name}**${idTag}${comp.description ? ' — ' + comp.description : ''}`);
+      lines.push(`- **${_applyMapping(comp.name)}**${idTag}${comp.description ? ' — ' + comp.description : ''}`);
     }
     lines.push('');
   }
@@ -397,11 +419,10 @@ function _renderTextInventory(textNodes, ctx) {
   const lines = ['### Text Inventory', ''];
   lines.push('| Text (truncated) | Font | Size | Weight | Color |');
   lines.push('|------------------|------|-----:|-------:|-------|');
-  for (const t of textNodes.slice(0, 50)) { // cap at 50 rows for readability
+  for (const t of textNodes) {
     const text = truncate(t.characters, 60).replace(/\n/g, ' ');
     lines.push(`| ${text || '*(empty)*'} | ${t.fontFamily || '—'} | ${t.fontSize || '—'} | ${t.fontWeight || '—'} | ${t.color || '—'} |`);
   }
-  if (textNodes.length > 50) lines.push(`\n> *… and ${textNodes.length - 50} more text nodes*`);
   return lines.join('\n');
 }
 

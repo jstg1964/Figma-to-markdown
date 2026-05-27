@@ -1,6 +1,15 @@
 'use strict';
 
 const { walkTree, colorToCSS } = require('../utils/helpers');
+const { config } = require('../config');
+
+/**
+ * Apply component name mapping if enabled
+ */
+function _applyMapping(name) {
+  if (!config.componentMapping.enabled) return name;
+  return config.componentMapping.mapping[name] || name;
+}
 
 /**
  * Extract all component and component-set instances from a Figma document.
@@ -37,7 +46,7 @@ function _extractDefinitions(components, componentSets) {
     defs.push({
       id: key,
       key: meta.key,
-      name: meta.name,
+      name: _applyMapping(meta.name),
       description: meta.description || '',
       type: 'COMPONENT_SET',
       documentationLinks: meta.documentationLinks || [],
@@ -49,7 +58,7 @@ function _extractDefinitions(components, componentSets) {
     defs.push({
       id: key,
       key: meta.key,
-      name: meta.name,
+      name: _applyMapping(meta.name),
       description: meta.description || '',
       type: 'COMPONENT',
       containingSetId: meta.componentSetId || null,
@@ -66,12 +75,13 @@ function _extractDefinitions(components, componentSets) {
 function _extractInstance(node, componentsMeta = {}) {
   const componentId = node.componentId || '';
   const componentMeta = componentsMeta[componentId] || {};
+  const originalComponentName = componentMeta.name || node.name;
 
   return {
     id: node.id,
     name: node.name,
     componentId,
-    componentName: componentMeta.name || node.name,
+    componentName: _applyMapping(originalComponentName),
     componentKey: componentMeta.key || null,
     description: componentMeta.description || '',
     visible: node.visible !== false,

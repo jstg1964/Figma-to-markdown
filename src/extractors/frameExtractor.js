@@ -1,11 +1,20 @@
 'use strict';
 
 const { walkTree, colorToCSS } = require('../utils/helpers');
+const { config } = require('../config');
+
+/**
+ * Apply component name mapping if enabled
+ */
+function _applyMapping(name) {
+  if (!config.componentMapping.enabled) return name;
+  return config.componentMapping.mapping[name] || name;
+}
 
 /**
  * Figma node types that represent frames / screens.
  */
-const FRAME_TYPES = new Set(['FRAME', 'COMPONENT', 'COMPONENT_SET', 'GROUP', 'SECTION']);
+const FRAME_TYPES = new Set(['FRAME', 'COMPONENT', 'COMPONENT_SET', 'GROUP', 'SECTION', 'INSTANCE']);
 
 /**
  * Extract all frame-level nodes from a Figma document.
@@ -38,7 +47,7 @@ function extractFrames(document) {
 function _extractFrame(node, page, depth) {
   const frame = {
     id: node.id,
-    name: node.name,
+    name: _applyMapping(node.name),
     type: node.type,
     pageId: page.id,
     pageName: page.name,

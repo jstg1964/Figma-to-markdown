@@ -1,0 +1,7 @@
+{
+  "_comment": "Component name mapping for Synapse design system",
+  "_description": "Map Figma component names to Synapse component names. If a component name is not in this list, the original name will be used.",
+  "Button": "Button",
+  "Checkbox": "SynapseCheckbox",
+  "TextInput": "SynapseTextInput"
+}

@@ -149,4 +149,116 @@ router.get('/:fileKey/versions', validateFileKey, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/:fileKey/validate', validateFileKey, async (req, res, next) => {
+  try {
+    const { fileKey } = req.params;
+    cache.delete(`file:${fileKey}:{}`);
+    const fileData = await figma.getFile(fileKey);
+    const normalised = normalize(fileData, {}, parseNormalizerOpts(req.query));
+
+    // Count and collect elements in raw Figma data
+    let rawFrameCount = 0;
+    let rawTextCount = 0;
+    let rawComponentCount = 0;
+    const rawFrames = [];
+
+    function collectNodes(node, depth = 0, parentId = null) {
+      if (!node) return;
+      if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'COMPONENT_SET' || node.type === 'GROUP' || node.type === 'SECTION' || node.type === 'INSTANCE') {
+        rawFrameCount++;
+        rawFrames.push({
+          id: node.id,
+          name: node.name,
+          type: node.type,
+          depth,
+          parentId,
+          visible: node.visible !== false,
+          locked: node.locked === true,
+        });
+      }
+      if (node.type === 'TEXT') {
+        rawTextCount++;
+      }
+      if (node.type === 'COMPONENT' || node.type === 'INSTANCE') {
+        rawComponentCount++;
+      }
+      if (node.children) {
+        for (const child of node.children) {
+          collectNodes(child, depth + 1, node.id);
+        }
+      }
+    }
+
+    if (fileData.document) {
+      collectNodes(fileData.document);
+    }
+
+    // Collect extracted frame IDs for comparison
+    const extractedFrameIds = new Set();
+    function collectExtractedFrameIds(frames) {
+      for (const frame of frames || []) {
+        extractedFrameIds.add(frame.id);
+        if (frame.childFrames) {
+          collectExtractedFrameIds(frame.childFrames);
+        }
+      }
+    }
+    collectExtractedFrameIds(normalised.frames);
+
+    // Find missing frames
+    const missingFrames = rawFrames.filter(f => !extractedFrameIds.has(f.id));
+
+    const validation = {
+      fileKey,
+      fileName: fileData.name,
+      extracted: {
+        frames: normalised.stats?.frameCount || 0,
+        text: normalised.stats?.textCount || 0,
+        components: normalised.stats?.componentDefinitionCount || 0,
+        componentInstances: normalised.stats?.componentInstanceCount || 0,
+        interactions: normalised.stats?.interactionCount || 0,
+        flows: normalised.stats?.flowCount || 0,
+      },
+      raw: {
+        frames: rawFrameCount,
+        text: rawTextCount,
+        components: rawComponentCount,
+      },
+      discrepancies: [],
+      missingFrames: missingFrames.slice(0, 50), // Limit to first 50
+      missingFramesCount: missingFrames.length,
+      pages: normalised.pages?.map(p => ({
+        name: p.name,
+        id: p.id,
+        childCount: p.childCount,
+        flowStartingPoints: p.flowStartingPoints?.length || 0,
+      })) || [],
+    };
+
+    // Check for discrepancies
+    if (validation.extracted.frames !== validation.raw.frames) {
+      validation.discrepancies.push({
+        type: 'FRAME_COUNT_MISMATCH',
+        extracted: validation.extracted.frames,
+        raw: validation.raw.frames,
+        missing: validation.missingFramesCount,
+        message: `Frame count differs: extracted ${validation.extracted.frames}, raw ${validation.raw.frames}, missing ${validation.missingFramesCount}`,
+      });
+    }
+
+    if (validation.extracted.text !== validation.raw.text) {
+      validation.discrepancies.push({
+        type: 'TEXT_COUNT_MISMATCH',
+        extracted: validation.extracted.text,
+        raw: validation.raw.text,
+        message: `Text count differs: extracted ${validation.extracted.text}, raw ${validation.raw.text}`,
+      });
+    }
+
+    validation.ok = validation.discrepancies.length === 0;
+
+    res.json({ ok: true, validation });
+  } catch (err) { next(err); }
+});
+
 module.exports = router;

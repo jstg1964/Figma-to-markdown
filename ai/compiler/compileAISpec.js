@@ -1,4 +1,4 @@
-function compileAISpec(figmaData) {
+function compileAISpec(figmaData, libraryMap = {}) {
   const frames = []
   const textNodes = []
   const components = []
@@ -8,7 +8,7 @@ function compileAISpec(figmaData) {
   const visibilityRules = new Set()
 
   // Extract comprehensive data
-  extractData(figmaData, frames, textNodes, components, interactions, styles, states, visibilityRules)
+  extractData(figmaData, frames, textNodes, components, interactions, styles, states, visibilityRules, libraryMap)
 
   return `# AI-SAFE SPEC
 
@@ -60,7 +60,11 @@ ${components.length > 0 ? components.map(c =>
 - **Component:** ${c.componentId || 'none'}
 - **Position:** x:${c.x}, y:${c.y}
 - **Size:** ${c.width}×${c.height}px
-- **Visible:** ${c.visible ? 'yes' : 'no'}`
+- **Visible:** ${c.visible ? 'yes' : 'no'}
+${c.isExternal ? `- **Source:** External Library${c.libraryName ? ` (${c.libraryName})` : ''}${c.libraryId ? ` [${c.libraryId}]` : ''}` : `- **Source:** Local file`}
+${c.properties ? `- **Properties:**\n${Object.entries(c.properties).map(([name, prop]) => 
+  `  - ${name} (${prop.type}): ${prop.defaultValue !== undefined ? `default: ${prop.defaultValue}` : 'no default'}${prop.variantOptions ? ` | variants: ${prop.variantOptions.join(', ')}` : ''}`
+).join('\n')}` : ''}${c.variantProperties ? `- **Variant Properties:** ${c.variantProperties.join(', ')}` : ''}${c.propertyOverrides ? `- **Property Overrides:**\n${Object.entries(c.propertyOverrides).map(([name, value]) => `  - ${name}: ${JSON.stringify(value)}`).join('\n')}` : ''}`
 ).join('\n\n') : 'No components found'}
 
 ---
@@ -133,12 +137,25 @@ ${visibilityRules.size > 0 ? Array.from(visibilityRules).map((v, i) => `${i + 1}
 
 ---
 
+## VALIDATION SUMMARY
+
+- **Total Frames:** ${frames.length}
+- **Total Text Nodes:** ${textNodes.length}
+- **Total Components:** ${components.length}
+- **Total Interactions:** ${interactions.length}
+- **Total Design Styles:** ${styles.size}
+- **Total States:** ${states.size}
+- **Visibility Rules:** ${visibilityRules.size}
+
+---
+
 ## COMPLETION CONTRACT
 
 You MUST:
 - Implement ALL frames with exact dimensions and positioning
 - Implement ALL text with exact styling (font, size, weight, alignment, color)
 - Implement ALL components and their instances
+- Implement ALL component properties and variants
 - Implement ALL interactions with correct triggers and actions
 - Apply ALL design styles (colors, fonts, spacing)
 - Respect ALL visibility rules and conditional rendering
@@ -146,17 +163,17 @@ You MUST:
 - Do NOT skip any element or property
 
 Before finishing:
-- Verify all frames are rendered with correct dimensions
-- Verify all text has correct styling and alignment
-- Verify all components are implemented
-- Verify all interactions work correctly
+- Verify all ${frames.length} frames are rendered with correct dimensions
+- Verify all ${textNodes.length} text nodes have correct styling and alignment
+- Verify all ${components.length} components are implemented with their properties
+- Verify all ${interactions.length} interactions work correctly
 - Verify design styles match exactly
 - List any missing elements or properties
 - Confirm full coverage of the design
 `
 }
 
-function extractData(node, frames, textNodes, components, interactions, styles, states, visibilityRules, depth = 0) {
+function extractData(node, frames, textNodes, components, interactions, styles, states, visibilityRules, libraryMap = {}, depth = 0) {
   if (!node) return
 
   const name = (node.name || "").toLowerCase()
@@ -226,7 +243,7 @@ function extractData(node, frames, textNodes, components, interactions, styles, 
   // Extract components
   if (node.type === 'INSTANCE' || node.type === 'COMPONENT') {
     const bounds = node.absoluteBoundingBox || { x: 0, y: 0, width: 0, height: 0 }
-    components.push({
+    const component = {
       id: node.id,
       name: node.name,
       type: node.type,
@@ -236,7 +253,39 @@ function extractData(node, frames, textNodes, components, interactions, styles, 
       width: Math.round(bounds.width),
       height: Math.round(bounds.height),
       visible: node.visible !== false
-    })
+    }
+
+    // Extract library information
+    if (node.libraryId) {
+      component.libraryId = node.libraryId
+      component.libraryName = libraryMap[node.libraryId] || node.libraryName || 'Unknown Library'
+      component.isExternal = true
+    } else if (node.componentId && node.componentId !== node.id) {
+      component.isExternal = true
+      // Try to extract library key from componentId format
+      const libraryKey = extractLibraryKeyFromId(node.componentId)
+      if (libraryKey && libraryMap[libraryKey]) {
+        component.libraryId = libraryKey
+        component.libraryName = libraryMap[libraryKey]
+      }
+    }
+
+    // Extract component properties
+    if (node.componentPropertyDefinitions) {
+      component.properties = extractComponentProperties(node.componentPropertyDefinitions)
+    }
+
+    // Extract variant properties if present
+    if (node.variantProperties) {
+      component.variantProperties = node.variantProperties
+    }
+
+    // Extract property overrides for instances
+    if (node.type === 'INSTANCE' && node.componentProperties) {
+      component.propertyOverrides = node.componentProperties
+    }
+
+    components.push(component)
   }
 
   // Extract interactions
@@ -261,8 +310,16 @@ function extractData(node, frames, textNodes, components, interactions, styles, 
 
   // Recurse into children
   if (node.children) {
-    node.children.forEach(child => extractData(child, frames, textNodes, components, interactions, styles, states, visibilityRules, depth + 1))
+    node.children.forEach(child => extractData(child, frames, textNodes, components, interactions, styles, states, visibilityRules, libraryMap, depth + 1))
   }
+}
+
+function extractLibraryKeyFromId(componentId) {
+  // Figma component IDs from libraries have format like: libraryKey:componentKey
+  if (componentId && componentId.includes(':')) {
+    return componentId.split(':')[0]
+  }
+  return null
 }
 
 function extractBackground(node) {
@@ -270,6 +327,18 @@ function extractBackground(node) {
   const solidFill = node.fills.find(f => f.type === 'SOLID' && f.visible !== false)
   if (solidFill) return rgbToHex(solidFill.color)
   return 'transparent'
+}
+
+function extractComponentProperties(definitions) {
+  const properties = {}
+  for (const [name, def] of Object.entries(definitions)) {
+    properties[name] = {
+      type: def.type,
+      defaultValue: def.defaultValue,
+      variantOptions: def.variantOptions || null
+    }
+  }
+  return properties
 }
 
 function rgbToHex(color) {

@@ -75,6 +75,36 @@ if (componentMapping.enabled) {
   console.log(`[Config] Component mapping enabled with ${Object.keys(componentMapping.mapping).length} mappings`);
 }
 
+/**
+ * Load library mapping file if it exists
+ */
+function loadLibraryMapping() {
+  const filePath = process.env.LIBRARY_MAPPING_FILE || 'LibraryMapping.json';
+  const fullPath = path.resolve(process.cwd(), filePath);
+  console.log(`[Config] Checking library mapping from: ${fullPath}`);
+
+  try {
+    if (!fs.existsSync(fullPath)) {
+      console.log(`[Config] Library mapping file not found, will use automatic fetching only`);
+      return {};
+    }
+
+    const content = fs.readFileSync(fullPath, 'utf8');
+    const data = JSON.parse(content);
+
+    // Extract libraries object if it exists
+    const libraries = data.libraries || data || {};
+
+    console.log(`[Config] Library mapping loaded with ${Object.keys(libraries).length} manual entries`);
+    return libraries;
+  } catch (err) {
+    console.warn(`[Config] Failed to load library mapping file: ${err.message}`);
+    return {};
+  }
+}
+
+const libraryMapping = loadLibraryMapping();
+
 const requiredEnvVars = ['FIGMA_ACCESS_TOKEN'];
 
 function validateConfig() {
@@ -117,6 +147,7 @@ const config = {
   },
 
   componentMapping,
+  libraryMapping,
 };
 
 module.exports = { config, validateConfig };

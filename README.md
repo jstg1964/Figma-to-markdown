@@ -156,6 +156,9 @@ All endpoints accept the Figma **file key** — the alphanumeric ID from a Figma
 |-----------|------|---------|-------------|
 | `perPage` | boolean | `false` | Return `{ pages: { [pageName]: markdownString } }` instead of a single string |
 | `download` | boolean | `false` | Set `Content-Disposition: attachment` for file download |
+| `page` | string | — | Generate markdown for a specific page by name (case-sensitive) |
+| `frame` | string | — | Generate markdown for specific frames by name (can match multiple frames) |
+| `nodeIds` | string | — | Generate markdown for specific nodes by ID (comma-separated, use hyphen or colon format) |
 
 #### `/nodes`
 
@@ -247,6 +250,51 @@ This feature allows you to map Figma component names to custom component names (
 - If a component name is not in the mapping file, the original name is preserved
 - Keys starting with `_` in the mapping file are treated as comments and ignored
 - The feature is opt-in via environment variable to avoid breaking existing behavior
+
+---
+
+## Manual External Library Configuration
+
+This feature allows you to manually map Figma library keys to library names for components from external libraries. This is useful when automatic library fetching doesn't provide the library names you need, or when you want to override the automatic library names.
+
+### Step-by-step Manual External Library Configuration
+
+**Locate the file** - Open `LibraryMapping.json` in the project root
+
+**Edit the file** - Add your library mappings in this format:
+
+```json
+{
+  "libraries": {
+    "libraryKey1": "Library Name 1",
+    "libraryKey2": "Library Name 2"
+  }
+}
+```
+
+**Find library keys** - The library key is the unique identifier for your Figma library. You can find it:
+- In Figma library URL: `figma.com/files/library/{libraryKey}/...`
+- In the Figma API response when fetching libraries
+- In component IDs that reference external libraries
+
+**Restart the server** - After editing, restart the server to reload the config:
+
+```bash
+npm start
+```
+
+**Verify** - The server logs will show:
+```
+[Config] Library mapping loaded with X manual entries
+```
+
+### Behavior
+
+- Manual library mappings take precedence over automatic library fetching from Figma API
+- If a library key is not in the manual mapping, automatic fetching is used as a fallback
+- Both sources are merged - manual config doesn't get overwritten by automatic fetching
+- If the `LibraryMapping.json` file doesn't exist or is empty, only automatic fetching is used
+- You can set a custom file path with the `LIBRARY_MAPPING_FILE` environment variable
 
 ---
 

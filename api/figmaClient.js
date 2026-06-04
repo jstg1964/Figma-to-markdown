@@ -196,6 +196,44 @@ class FigmaClient {
     logger.info(`Fetching versions for file: ${fileKey}`);
     return this._request(`/files/${fileKey}/versions`);
   }
+
+  /**
+   * GET /v1/libraries
+   * Returns list of libraries accessible to the user
+   */
+  async getLibraries() {
+    const cacheKey = 'libraries';
+    if (config.cache.enabled) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit: ${cacheKey}`);
+        return cached;
+      }
+    }
+    logger.info('Fetching libraries');
+    const data = await this._request('/libraries');
+    if (config.cache.enabled) cache.set(cacheKey, data);
+    return data;
+  }
+
+  /**
+   * GET /v1/libraries/:libraryId
+   * Returns metadata for a specific library
+   */
+  async getLibrary(libraryId) {
+    const cacheKey = `library:${libraryId}`;
+    if (config.cache.enabled) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        logger.debug(`Cache hit: ${cacheKey}`);
+        return cached;
+      }
+    }
+    logger.info(`Fetching library: ${libraryId}`);
+    const data = await this._request(`/libraries/${libraryId}`);
+    if (config.cache.enabled) cache.set(cacheKey, data);
+    return data;
+  }
 }
 
 module.exports = { FigmaClient, FigmaApiError };

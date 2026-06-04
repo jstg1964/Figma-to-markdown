@@ -10,6 +10,7 @@ const { extractFlows } = require('../../extractors/flowExtractor');
 const { cache } = require('../../utils/cache');
 const { compileAISpec } = require("../../ai/compiler/compileAISpec");
 const logger = require('../../utils/logger');
+const { config } = require('../../config');
 
 const router = Router();
 const figma  = new FigmaClient();
@@ -40,20 +41,153 @@ router.get('/:fileKey/json', validateFileKey, validateFigmaQueryParams, async (r
 router.get('/:fileKey/markdown', validateFileKey, validateFigmaQueryParams, async (req, res, next) => {
   try {
     const { fileKey } = req.params;
-    const { version, perPage, download } = req.query;
-    const [fileData, stylesData] = await Promise.all([
+    const { version, perPage, download, page, frame, nodeIds } = req.query;
+    const [fileData, stylesData, librariesData] = await Promise.all([
       figma.getFile(fileKey, version ? { version } : {}),
       figma.getStyles(fileKey).catch(() => ({})),
+      figma.getLibraries().catch(() => ({ libraries: [] })),
     ]);
     const normalised = normalize(fileData, stylesData, parseNormalizerOpts(req.query));
-    const rendered   = render(normalised, { perPage: Boolean(perPage) });
-    const aiSafe = compileAISpec(fileData.document);
+    
+    // Filter based on query parameters
+    let filteredNormalised = normalised;
+    let filteredDocument = fileData.document;
+    
+    if (page) {
+      filteredNormalised = filterByPage(normalised, page);
+      filteredDocument = filterDocumentByPage(fileData.document, page);
+    } else if (frame) {
+      filteredNormalised = filterByFrame(normalised, frame);
+      filteredDocument = filterDocumentByFrame(fileData.document, frame);
+    } else if (nodeIds) {
+      const ids = nodeIds.split(',').map(id => id.replace('-', ':'));
+      filteredNormalised = filterByNodeIds(normalised, ids);
+      filteredDocument = filterDocumentByNodeIds(fileData.document, ids);
+    }
+    
+    const rendered   = render(filteredNormalised, { perPage: Boolean(perPage) });
+    const libraryMap = buildLibraryMap(librariesData.libraries || []);
+    const aiSafe = compileAISpec(filteredDocument, libraryMap);
 //    if (perPage) return res.json({ ok: true, fileKey, pages: rendered });
     if (perPage) return res.json({ ok: true, fileKey, pages: rendered, aiSafe });
     if (download) res.setHeader('Content-Disposition', `attachment; filename="${fileKey}-figma.md"`);
     res.type('text/markdown; charset=utf-8').send(rendered + '\n\n--- THE FOLLLOWING IS AI-SAFE CONTENT ---\n\n' + aiSafe);
   } catch (err) { next(err); }
 });
+
+function buildLibraryMap(libraries) {
+  // Start with manual library mapping from config
+  const map = { ...config.libraryMapping };
+
+  // Merge with automatic library fetching from Figma API
+  // Automatic fetching doesn't override manual config
+  for (const lib of libraries) {
+    if (!map[lib.key]) {
+      map[lib.key] = lib.name;
+    }
+  }
+
+  return map;
+}
+
+function filterByPage(normalised, pageName) {
+  if (!normalised.pages) return normalised;
+  
+  const filteredPage = normalised.pages.find(p => p.name === pageName);
+  if (!filteredPage) {
+    // Page not found, return empty structure
+    return {
+      ...normalised,
+      pages: [],
+      frames: []
+    };
+  }
+  
+  return {
+    ...normalised,
+    pages: [filteredPage]
+  };
+}
+
+function filterDocumentByPage(document, pageName) {
+  if (!document.children) return document;
+  
+  const page = document.children.find(child => child.name === pageName && child.type === 'PAGE');
+  if (!page) return { children: [] };
+  
+  return page;
+}
+
+function filterByFrame(normalised, frameName) {
+  if (!normalised.frames) return normalised;
+  
+  const filteredFrames = normalised.frames.filter(f => f.name === frameName);
+  
+  return {
+    ...normalised,
+    frames: filteredFrames
+  };
+}
+
+function filterDocumentByFrame(document, frameName) {
+  const result = { children: [] };
+  
+  function walk(node) {
+    if (node.name === frameName && ['FRAME', 'COMPONENT', 'INSTANCE', 'GROUP'].includes(node.type)) {
+      result.children.push(node);
+    }
+    if (node.children) {
+      node.children.forEach(walk);
+    }
+  }
+  
+  walk(document);
+  return result;
+}
+
+function filterByNodeIds(normalised, nodeIds) {
+  if (!normalised.frames) return normalised;
+  
+  const idSet = new Set(nodeIds);
+  
+  // Find frames that contain the requested node IDs (either the frame itself or its children)
+  const filteredFrames = normalised.frames.filter(f => {
+    if (idSet.has(f.id)) return true;
+    
+    // Check if any children match
+    function hasMatchingNode(node) {
+      if (idSet.has(node.id)) return true;
+      if (node.children) {
+        return node.children.some(hasMatchingNode);
+      }
+      return false;
+    }
+    
+    return hasMatchingNode(f);
+  });
+  
+  return {
+    ...normalised,
+    frames: filteredFrames
+  };
+}
+
+function filterDocumentByNodeIds(document, nodeIds) {
+  const idSet = new Set(nodeIds);
+  const result = { children: [] };
+  
+  function walk(node) {
+    if (idSet.has(node.id)) {
+      result.children.push(node);
+    }
+    if (node.children) {
+      node.children.forEach(walk);
+    }
+  }
+  
+  walk(document);
+  return result;
+}
 
 router.get('/:fileKey/interactions', validateFileKey, async (req, res, next) => {
   try {

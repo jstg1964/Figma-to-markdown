@@ -92,6 +92,7 @@ npm install
 ```bash
 cp .env.example .env
 # Edit .env — at minimum, set FIGMA_ACCESS_TOKEN
+# Optional: Set COMPONENT_MAPPING_ENABLED=true to enable component name mapping
 ```
 
 ### 4. Run
